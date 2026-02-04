@@ -22,7 +22,7 @@ namespace RelationsNaN.Controllers
         // GET: Games
         public async Task<IActionResult> Index()
         {
-            var relationsNaNContext = _context.Game.Include(g => g.Genre);
+            var relationsNaNContext = _context.Game.Include(g => g.Genre).Include(g => g.Platforms);
             return View(await relationsNaNContext.ToListAsync());
         }
 
@@ -69,6 +69,48 @@ namespace RelationsNaN.Controllers
             return View(game);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddPlatform(int id, int platformId)
+        {
+            var game = await _context.Game
+                .Include(g => g.Platforms)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (game == null)
+                return NotFound();
+
+            var platform = await _context.Platform.FindAsync(platformId);
+            if (platform == null)
+                return NotFound();
+
+            game.Platforms.Add(platform);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> RemovePlatform(int id, int platformId)
+        {
+            var game = await _context.Game
+                .Include(g => g.Platforms)
+                .FirstOrDefaultAsync(g => g.Id == id);
+
+            if (game == null)
+                return NotFound();
+
+            var platform = await _context.Platform.FindAsync(platformId);
+            if (platform == null)
+                return NotFound();
+
+            game.Platforms.Remove(platform);
+            await _context.SaveChangesAsync();
+
+            return RedirectToAction(nameof(Edit), new { id });
+        }
+
         // GET: Games/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
@@ -77,12 +119,13 @@ namespace RelationsNaN.Controllers
                 return NotFound();
             }
 
-            var game = await _context.Game.FindAsync(id);
+            var game = await _context.Game.Include(g => g.Platforms).Where(g => g.Id == id).FirstAsync();
             if (game == null)
             {
                 return NotFound();
             }
             ViewData["GenreId"] = new SelectList(_context.Genre, "Id", "Name", game.GenreId);
+            ViewData["Platforms"] = new SelectList(_context.Platform, "Id", "Name");
             return View(game);
         }
 
